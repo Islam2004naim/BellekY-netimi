@@ -12,10 +12,11 @@ const TEMPLATES = {
   c: {
     "Temel": `void main() {\n  int x = 10;\n  calculate();\n}\n\nvoid calculate() {\n  int y = 20;\n}`,
     "Dinamik": `void main() {\n  int* p = malloc(4);\n  int x = 100;\n}`,
-    "Özyineleme": `void main() {\n  fact();\n}\n\nvoid fact() {\n  int n = 3;\n  fact();\n}`
+    "Özyineleme": `void main() {\n  factorial(5);\n}\n\nint factorial(int n) {\n  if (n <= 1) return 1;\n  return factorial(n - 1);\n}`
   },
   java: {
-    "Nesne": `public static void main() {\n  User u = 101;\n  process();\n}\n\nvoid process() {\n  int data = 500;\n}`,
+    "Nesne": `public static void main() {\n  User u = new User();\n  process();\n}\n\nvoid process() {\n  int data = 500;\n}`,
+    "Faktöriyel": `public static void main() {\n  fact(4);\n}\n\nint fact(int n) {\n  return fact(n-1);\n}`,
     "Referans": `void main() {\n  Car c = 1;\n  drive();\n}`
   },
   python: {
@@ -42,6 +43,7 @@ const App = () => {
   const [playbackSpeed, setPlaybackSpeed] = useState(800);
   const [isDeepView, setIsDeepView] = useState(false);
   const [history, setHistory] = useState([]); // Undo history
+  const [error, setError] = useState(null); // Error message (e.g. Stack Overflow)
 
   // Syntax Highlighting Logic
   const highlightCode = (codeText) => {
@@ -78,6 +80,7 @@ const App = () => {
     setFp(growthDirection === 'down' ? '0x7FFF' : '0x0000');
     setStack([]);
     setHeap([]); // Reset Heap
+    setError(null);
     setIsRunning(false);
   };
 
@@ -98,10 +101,17 @@ const App = () => {
       .map((line, index) => ({ line: line.trim(), index }))
       .filter(item => item.line !== '');
 
-    if (step >= nonEmptyLineIndices.length) return;
+    if (step >= nonEmptyLineIndices.length || error) return;
 
     const { line: currentLine, index: actualLineIndex } = nonEmptyLineIndices[step];
     setPc(actualLineIndex);
+
+    // Stack Overflow Check
+    if (stack.length > 10) {
+        setError("STACK OVERFLOW! Bellek sınırı aşıldı (Recursion Depth Limit).");
+        setIsRunning(false);
+        return;
+    }
 
     // SAVE TO HISTORY BEFORE UPDATE
     setHistory(prev => [...prev, { pc, sp, fp, stack, heap, step }]);
@@ -302,6 +312,24 @@ const App = () => {
                 <p style={{ fontSize: '0.8rem' }}>Bellek Henüz Boş</p>
               </div>
             )}
+            
+            {error && (
+              <div style={{ 
+                background: 'rgba(239, 68, 68, 0.1)', 
+                border: '1px solid #ef4444', 
+                color: '#ef4444', 
+                padding: '10px', 
+                borderRadius: '8px', 
+                fontSize: '0.7rem',
+                margin: '10px',
+                textAlign: 'center',
+                animation: 'shake 0.5s ease'
+              }}>
+                <Shield size={16} style={{ marginBottom: '5px' }} />
+                <div>{error}</div>
+              </div>
+            )}
+
             {stack.map((frame) => (
               <div key={frame.id} className="stack-frame">
                 <div className="frame-header">

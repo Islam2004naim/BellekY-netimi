@@ -464,6 +464,12 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
 /* Anti-gravity toggle switch style */
 .switch-container {
   display: flex;
