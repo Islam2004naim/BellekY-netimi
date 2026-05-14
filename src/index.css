@@ -148,6 +148,25 @@ body {
   flex-direction: column;
   gap: 1rem;
   position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.stack-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.stack-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stack-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.stack-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .stack-growth-indicator {
