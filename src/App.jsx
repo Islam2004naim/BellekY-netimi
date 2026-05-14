@@ -4,7 +4,7 @@ import {
   Code2, Database, Shield, Box, Share2, 
   Terminal, Monitor, Play, BookOpen, RotateCcw, 
   ChevronRight, ArrowUpCircle, ArrowDownCircle, Info, Layout,
-  Download, Zap
+  Download, Zap, PenTool
 } from 'lucide-react';
 import './index.css';
 
@@ -22,14 +22,21 @@ const TEMPLATES = {
   python: {
     "Lambda": `def main():\n  x = 10\n  f = lambda y: x+y\n  f(5)\n\nmain()`,
     "Dinamik": `def start():\n  a = 1\n  run()\n\nstart()`
+  },
+  csharp: {
+    "Hesap Mak. (Delegate)": `using System;\n\nclass Program {\n  delegate int Op(int a, int b);\n  static void Main() {\n    Op add = (x, y) => x + y;\n    Calc(add, 5, 3);\n  }\n  static void Calc(Op func, int a, int b) {\n    int result = func(a, b);\n  }\n}`,
+    "Değer vs Referans": `using System;\nusing System.Collections.Generic;\n\nclass Program {\n  static void Main() {\n    List<int> nums = new List<int>();\n    Modify(nums);\n  }\n  static void Modify(List<int> list) {\n    var refList = list;\n    refList.Add(99);\n  }\n}`,
+    "Faktöriyel (Çalışır)": `using System;\n\nclass Program {\n  static void Main() {\n    Factorial(5);\n  }\n\n  static long Factorial(int n) {\n    if (n <= 1) return 1;\n    return n * Factorial(n - 1);\n  }\n}`,
+    "Faktöriyel (StackOverflow)": `using System;\n\nclass Program {\n  static void Main() {\n    Factorial(100000);\n  }\n\n  static long Factorial(int n) {\n    if (n <= 1) return 1;\n    return n * Factorial(n - 1);\n  }\n}`
   }
 };
 
 const App = () => {
   // CONFIG STATE
-  const [language, setLanguage] = useState('c'); // 'c', 'java', 'python'
+  const [language, setLanguage] = useState('csharp'); // 'c', 'java', 'python', 'csharp'
   const [growthDirection, setGrowthDirection] = useState('down'); 
   const [activeTab, setActiveTab] = useState('theory');
+  const [isPaperMode, setIsPaperMode] = useState(true);
 
   // SIMULATION STATE
   const [code, setCode] = useState(TEMPLATES.c["Temel"]);
@@ -47,7 +54,7 @@ const App = () => {
 
   // Syntax Highlighting Logic
   const highlightCode = (codeText) => {
-    const keywords = /\b(void|int|float|double|public|static|def|return|class|if|else|for|while)\b/g;
+    const keywords = /\b(using|long|void|int|float|double|public|static|def|return|class|if|else|for|while)\b/g;
     const functions = /\b([a-zA-Z0-9_]+)(?=\()/g;
     const values = /\b([0-9]+)\b/g;
     
@@ -70,7 +77,7 @@ const App = () => {
     link.click();
   };
 
-  const currentTheme = language === 'python' ? 'theme-python' : language === 'java' ? 'theme-java' : 'theme-c';
+  const currentTheme = language === 'python' ? 'theme-python' : language === 'java' ? 'theme-java' : language === 'csharp' ? 'theme-csharp' : 'theme-c';
 
   // RESET SIMULATION
   const resetSimulation = () => {
@@ -107,8 +114,8 @@ const App = () => {
     setPc(actualLineIndex);
 
     // Stack Overflow Check
-    if (stack.length > 10) {
-        setError("STACK OVERFLOW! Bellek sınırı aşıldı (Recursion Depth Limit).");
+    if (stack.length > 8) {
+        setError("STACK OVERFLOW EXCEPTION! Bellek sınırı aşıldı (Sonsuz Döngü / Çok Derin Recursion).");
         setIsRunning(false);
         return;
     }
@@ -123,7 +130,7 @@ const App = () => {
     // 1. Function Call Detection
     const isFuncDef = language === 'python' 
       ? currentLine.includes('def ')
-      : (currentLine.includes('void') || currentLine.includes('static') || currentLine.includes('int ')) && currentLine.includes('(');
+      : (currentLine.includes('void') || currentLine.includes('static') || currentLine.includes('long ') || currentLine.includes('int ')) && currentLine.includes('(');
     
     const isFuncCall = currentLine.includes('()') || (currentLine.includes('(') && currentLine.includes(')') && !isFuncDef);
 
@@ -132,12 +139,21 @@ const App = () => {
         const frameName = frameNameMatch?.[1] || 'Frame';
         
         const dynamicLink = stack.length > 0 ? stack[stack.length - 1].fp : '0x0000';
+        
+        const isNested = frameName === 'Calc' || frameName === 'Modify' || frameName === 'factorial' || frameName === 'Factorial' || frameName === 'fact';
+        const staticLink = isNested && stack.length > 0 ? stack[0].fp : '0x0000'; 
+        const staticDepth = isNested ? stack.length : 0;
+        const chainOffset = isNested ? 1 : 0;
+
         newStack.push({
           id: `frame-${Date.now()}`,
           name: language === 'python' ? 'Python Frame' : 'Stack Frame',
           func: frameName,
           fp: `0x${currentSp.toString(16).toUpperCase()}`,
           dynamicLink: dynamicLink,
+          staticLink: staticLink,
+          staticDepth: staticDepth,
+          chainOffset: chainOffset,
           returnAddr: `0x0${(actualLineIndex * 4).toString(16).toUpperCase()}`,
           vars: []
         });
@@ -251,6 +267,9 @@ const App = () => {
           <button className={`btn ${isDeepView ? 'btn-primary' : ''}`} onClick={() => setIsDeepView(!isDeepView)} title="Deep View (Hardware Level)">
             <Zap size={16} color={isDeepView ? '#fff' : '#888'} />
           </button>
+          <button className={`btn ${isPaperMode ? 'btn-primary' : ''}`} onClick={() => setIsPaperMode(!isPaperMode)} title="Kağıt Çizim Görünümü" style={isPaperMode ? {background: '#f59e0b', color: '#000'} : {}}>
+            <PenTool size={16} /> Kağıt
+          </button>
           <button className="btn" onClick={exportState} title="Export Report"><Download size={16} /></button>
           <button className="btn" onClick={resetSimulation}><RotateCcw size={16} /> Sıfırla</button>
           <button className="btn" onClick={stepBack} disabled={history.length === 0}><RotateCcw size={16} style={{ transform: 'scaleX(-1)' }} /> Geri Al</button>
@@ -292,6 +311,7 @@ const App = () => {
             </select>
             <button className={`btn ${language === 'c' ? 'btn-primary' : ''}`} onClick={() => setLanguage('c')}>C</button>
             <button className={`btn ${language === 'java' ? 'btn-primary' : ''}`} onClick={() => setLanguage('java')}>Java</button>
+            <button className={`btn ${language === 'csharp' ? 'btn-primary' : ''}`} onClick={() => setLanguage('csharp')}>C#</button>
             <button className={`btn ${language === 'python' ? 'btn-primary' : ''}`} onClick={() => setLanguage('python')}>Python</button>
           </div>
         </div>
@@ -300,9 +320,9 @@ const App = () => {
       {/* Main Layout */}
       <main className="main-layout">
         
-        <section className="panel">
+        <section className={`panel ${isPaperMode ? 'paper-bg' : ''}`}>
           <div className="panel-header"><Database size={16} /> GÖRSEL BELLEK (STACK)</div>
-          <div className="stack-container" style={{ flexDirection: growthDirection === 'down' ? 'column' : 'column-reverse' }}>
+          <div className={`stack-container ${error ? 'stack-crash' : ''}`} style={{ flexDirection: growthDirection === 'down' ? 'column' : 'column-reverse' }}>
             <div className="stack-growth-indicator">
               {growthDirection === 'down' ? <ArrowDownCircle size={16} /> : <ArrowUpCircle size={16} />}
             </div>
@@ -331,7 +351,7 @@ const App = () => {
             )}
 
             {stack.map((frame) => (
-              <div key={frame.id} className="stack-frame">
+              <div key={frame.id} className={`stack-frame ${isPaperMode ? 'paper-frame' : ''}`}>
                 <div className="frame-header">
                   <span>{frame.name}: {frame.func}()</span>
                   <span>FP: {frame.fp}</span>
@@ -339,6 +359,11 @@ const App = () => {
                 <div className="frame-body">
                   <div className="frame-item"><span className="label">Return Addr:</span><span className="value hex">{frame.returnAddr}</span></div>
                   <div className="frame-item"><span className="label">Dynamic Link:</span><span className="value link">{frame.dynamicLink}</span></div>
+                  <div className="frame-item"><span className="label">Static Link:</span><span className="value link" style={{color: '#8b5cf6'}}>{frame.staticLink || 'N/A'}</span></div>
+                  <div style={{display: 'flex', gap: '10px', marginTop: '4px'}}>
+                    <div className="frame-item" style={{flex: 1}}><span className="label">Depth:</span><span className="value">{frame.staticDepth ?? 0}</span></div>
+                    <div className="frame-item" style={{flex: 1}}><span className="label">Offset:</span><span className="value">{frame.chainOffset ?? 0}</span></div>
+                  </div>
                   {frame.vars.map((v, vi) => (
                     <div key={vi} className={`frame-item ${v.value.includes('@') ? 'ref-active' : ''}`} style={{ 
                       borderTop: '1px solid #18181b', 
@@ -473,16 +498,28 @@ const App = () => {
                   <div style={{ fontSize: '0.65rem', color: 'var(--theme-primary)', fontWeight: 'bold' }}>REAL-TIME FEED</div>
                 </div>
                 <svg width="100%" height="80" style={{ overflow: 'visible' }}>
+                  <defs>
+                    <linearGradient id="flow-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#3b82f6" />
+                      <stop offset="50%" stopColor="#8b5cf6" />
+                      <stop offset="100%" stopColor="#ec4899" />
+                    </linearGradient>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
                   <polyline
                     fill="none"
-                    stroke="var(--theme-primary)"
-                    strokeWidth="2.5"
+                    stroke="url(#flow-gradient)"
+                    strokeWidth="3"
                     strokeLinejoin="round"
+                    filter="url(#glow)"
                     points={Array.from({ length: step + 1 }).map((_, i) => `${(i * 30)},${80 - (i * 8 + 10)}`).join(' ')}
                     style={{ transition: 'all 0.5s ease' }}
                   />
                   {Array.from({ length: step + 1 }).map((_, i) => (
-                    <circle key={i} cx={(i * 30)} cy={80 - (i * 8 + 10)} r="3" fill="var(--theme-primary)" style={{ transition: 'all 0.5s ease' }} />
+                    <circle key={i} cx={(i * 30)} cy={80 - (i * 8 + 10)} r="4" fill="#fff" stroke="url(#flow-gradient)" strokeWidth="2" style={{ transition: 'all 0.5s ease', filter: 'url(#glow)' }} />
                   ))}
                 </svg>
               </div>
@@ -513,11 +550,19 @@ const App = () => {
             )}
             
             <div className="theory-card" style={{ background: 'rgba(255,255,255,0.02)', borderLeft: '4px solid var(--theme-primary)', padding: '15px', borderRadius: '8px' }}>
-              <h3 style={{ fontSize: '0.85rem', marginBottom: '10px' }}>{language.toUpperCase()} Mimari Özeti</h3>
+              <h3 style={{ fontSize: '0.85rem', marginBottom: '10px' }}>{language.toUpperCase()} - Analiz ve Kavramlar</h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                {language === 'python' && "Python'da bellek yönetimi referانس sayımı ile yapılır. Her veri bir objedir."}
-                {language === 'java' && "JVM, nesneleri Heap'te, metot çağrılarını Stack'te yönetir."}
-                {language === 'c' && "C dilinde kapsam statiktir. Bellek yerleşimi derleme zamanında belirlenir."}
+                {code.includes('delegate') && "Closure & Lambda: Modern dillerde iç içe fonksiyonlar yerine Lambda ve Delegate yapıları kullanılır. Bu sayede bir fonksiyon, başka bir fonksiyona parametre olarak (Higher-order function) aktarılabilir."}
+                {code.includes('List<int>') && "Değer vs Referans: Sınıflar, Listeler (List) referans tipindedir ve Heap'te tutulur. Fonksiyona parametre olarak geçildiğinde, sadece bellek adresi kopyalanır. Değişiklikler orijinal listeyi etkiler."}
+                {code.includes('Factorial') && "Özyineleme & StackOverflow: Her recursive çağrı yeni bir Aktivasyon Kaydı (Activation Record) oluşturur. Çok derin çağrılarda yığın kapasitesi aşılır."}
+                {!code.includes('delegate') && !code.includes('List<int>') && !code.includes('Factorial') && (
+                  <>
+                    {language === 'python' && "Python'da bellek yönetimi referans sayımı ile yapılır. Dinamik kapsamda (Dynamic Scoping) değişkenlere derin erişim (Deep Access) ile statik zincir üzerinden, sığ erişim (Shallow Access) ile yerel tablodan ulaşılır."}
+                    {language === 'java' && "JVM, nesneleri Heap'te, metot çağrılarını Stack'te yönetir. Blokların yığın üzerinde yönetimi titizlikle yapılır."}
+                    {language === 'c' && "C dilinde kapsam statiktir. Bellek yerleşimi derleme zamanında belirlenir."}
+                    {language === 'csharp' && "C# dilinde değer tipleri Stack'te, referans tipleri Heap'te tutulur. Çöp toplayıcı (GC) dinamik belleği yönetir."}
+                  </>
+                )}
               </p>
             </div>
 

@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
 
 :root {
   --bg-dark: #050507;
@@ -25,6 +26,11 @@
   --python-primary: #eab308;
   --python-secondary: #22c55e;
   --python-glow: rgba(234, 179, 8, 0.1);
+  
+  /* C# Mode - Purple/Pink */
+  --csharp-primary: #8b5cf6;
+  --csharp-secondary: #ec4899;
+  --csharp-glow: rgba(139, 92, 246, 0.15);
 }
 
 .theme-c {
@@ -43,6 +49,12 @@
   --theme-primary: var(--python-primary);
   --theme-secondary: var(--python-secondary);
   --theme-glow: var(--python-glow);
+}
+
+.theme-csharp {
+  --theme-primary: var(--csharp-primary);
+  --theme-secondary: var(--csharp-secondary);
+  --theme-glow: var(--csharp-glow);
 }
 
 * {
@@ -595,4 +607,100 @@ input:checked + .slider:before { transform: translateX(14px); }
   .app-container {
     overflow-y: auto;
   }
+}
+
+/* --- KAĞIT (PAPER) MODE STYLES --- */
+.paper-bg {
+  background-color: #fdf6e3 !important;
+  color: #1a1a1a !important;
+  border: 2px solid #d4c4a8 !important;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.05) !important;
+  background-image: 
+    linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
+}
+
+.paper-bg .panel-header {
+  color: #1a1a1a !important;
+  border-bottom: 2px dashed #d4c4a8 !important;
+  background: none !important;
+}
+
+.paper-bg .stack-growth-indicator {
+  background: linear-gradient(to bottom, transparent, #888, transparent) !important;
+}
+
+.paper-mode {
+  padding: 1.5rem !important;
+}
+
+.paper-frame {
+  background-color: #fff !important;
+  border: 2px solid #444 !important;
+  border-radius: 4px !important;
+  box-shadow: 3px 3px 0px rgba(0,0,0,0.15) !important;
+  font-family: 'Caveat', 'Comic Sans MS', cursive, sans-serif !important;
+  color: #222 !important;
+  transform: rotate(-1deg);
+  transition: all 0.3s ease;
+}
+
+.paper-frame:nth-child(even) {
+  transform: rotate(1.5deg);
+}
+
+.paper-frame .frame-header {
+  background-color: transparent !important;
+  color: #0056b3 !important;
+  border-bottom: 1px dashed #666 !important;
+  font-family: 'Caveat', 'Comic Sans MS', cursive, sans-serif !important;
+  font-size: 1.3rem !important;
+  font-weight: bold;
+}
+
+.paper-frame .frame-body .label {
+  color: #333 !important;
+  font-family: 'Caveat', 'Comic Sans MS', cursive, sans-serif !important;
+  font-size: 1.1rem !important;
+}
+
+.paper-frame .frame-body .value {
+  color: #d32f2f !important;
+  font-family: 'Caveat', 'Comic Sans MS', cursive, sans-serif !important;
+  font-size: 1.2rem !important;
+}
+
+.paper-frame .frame-body .value.hex {
+  color: #1976d2 !important;
+  font-size: 1rem !important;
+}
+
+.paper-frame .frame-item {
+  font-family: 'Caveat', 'Comic Sans MS', cursive, sans-serif !important;
+  border-top-color: rgba(0,0,0,0.1) !important;
+}
+
+/* --- STACK OVERFLOW CRASH ANIMATION --- */
+.stack-crash {
+  animation: explode 0.5s cubic-bezier(.36,.07,.19,.97) both;
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  box-shadow: inset 0 0 50px rgba(239, 68, 68, 0.3) !important;
+  border: 2px solid #ef4444 !important;
+  border-radius: 12px;
+}
+
+.stack-crash .stack-frame {
+  animation: shake 0.3s infinite !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.6) !important;
+}
+
+@keyframes explode {
+  0% { transform: scale(1); }
+  20% { transform: scale(1.02) rotate(1deg); }
+  40% { transform: scale(0.98) rotate(-1deg); }
+  60% { transform: scale(1.01) rotate(1deg); }
+  80% { transform: scale(0.99) rotate(-1deg); }
+  100% { transform: scale(1); }
 }
