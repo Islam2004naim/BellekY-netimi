@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Layers, Cpu, Activity, ArrowRightLeft, 
-  Code2, Database, Shield, Box, Share2, 
-  Terminal, Monitor, Play, BookOpen, RotateCcw, 
+import {
+  Layers, Cpu, Activity, ArrowRightLeft,
+  Code2, Database, Shield, Box, Share2,
+  Terminal, Monitor, Play, BookOpen, RotateCcw,
   ChevronRight, ArrowUpCircle, ArrowDownCircle, Info, Layout,
   Download, Zap, PenTool
 } from 'lucide-react';
@@ -17,14 +17,15 @@ const TEMPLATES = {
   java: {
     "Nesne": `public static void main() {\n  User u = new User();\n  process();\n}\n\nvoid process() {\n  int data = 500;\n}`,
     "Faktöriyel": `public static void main() {\n  fact(4);\n}\n\nint fact(int n) {\n  return fact(n-1);\n}`,
-    "Referans": `void main() {\n  Car c = 1;\n  drive();\n}`
+    "Referans": `void main() {\n  Car c = 1;\n  drive();\n}`,
+    "Lambda": `public static void main() {\n  MathOp add = (a, b) -> a + b;\n  add.calc(5, 3);\n}`
   },
   python: {
     "Lambda": `def main():\n  x = 10\n  f = lambda y: x+y\n  f(5)\n\nmain()`,
     "Dinamik": `def start():\n  a = 1\n  run()\n\nstart()`
   },
   csharp: {
-    "Hesap Mak. (Delegate)": `using System;\n\nclass Program {\n  delegate int Op(int a, int b);\n  static void Main() {\n    Op add = (x, y) => x + y;\n    Calc(add, 5, 3);\n  }\n  static void Calc(Op func, int a, int b) {\n    int result = func(a, b);\n  }\n}`,
+    "Hesap Mak. (Delegate & Lambda)": `using System;\n\nclass Program {\n  delegate int Op(int a, int b);\n  static void Main() {\n    Op add = (x, y) => x + y;\n    Calc(add, 5, 3);\n  }\n  static void Calc(Op func, int a, int b) {\n    int result = func(a, b);\n  }\n}`,
     "Değer vs Referans": `using System;\nusing System.Collections.Generic;\n\nclass Program {\n  static void Main() {\n    List<int> nums = new List<int>();\n    Modify(nums);\n  }\n  static void Modify(List<int> list) {\n    var refList = list;\n    refList.Add(99);\n  }\n}`,
     "Faktöriyel (Çalışır)": `using System;\n\nclass Program {\n  static void Main() {\n    Factorial(5);\n  }\n\n  static long Factorial(int n) {\n    if (n <= 1) return 1;\n    return n * Factorial(n - 1);\n  }\n}`,
     "Faktöriyel (StackOverflow)": `using System;\n\nclass Program {\n  static void Main() {\n    Factorial(100000);\n  }\n\n  static long Factorial(int n) {\n    if (n <= 1) return 1;\n    return n * Factorial(n - 1);\n  }\n}`
@@ -34,13 +35,13 @@ const TEMPLATES = {
 const App = () => {
   // CONFIG STATE
   const [language, setLanguage] = useState('csharp'); // 'c', 'java', 'python', 'csharp'
-  const [growthDirection, setGrowthDirection] = useState('down'); 
+  const [growthDirection, setGrowthDirection] = useState('down');
   const [activeTab, setActiveTab] = useState('theory');
   const [isPaperMode, setIsPaperMode] = useState(true);
 
   // SIMULATION STATE
   const [code, setCode] = useState(TEMPLATES.c["Temel"]);
-  const [pc, setPc] = useState(0); 
+  const [pc, setPc] = useState(0);
   const [sp, setSp] = useState('0x7FFF');
   const [fp, setFp] = useState('0x7FFF');
   const [stack, setStack] = useState([]);
@@ -57,7 +58,7 @@ const App = () => {
     const keywords = /\b(using|long|void|int|float|double|public|static|def|return|class|if|else|for|while)\b/g;
     const functions = /\b([a-zA-Z0-9_]+)(?=\()/g;
     const values = /\b([0-9]+)\b/g;
-    
+
     return codeText.split('\n').map((line, i) => {
       let highlighted = line
         .replace(keywords, '<span class="hl-keyword">$1</span>')
@@ -115,9 +116,9 @@ const App = () => {
 
     // Stack Overflow Check
     if (stack.length > 8) {
-        setError("STACK OVERFLOW EXCEPTION! Bellek sınırı aşıldı (Sonsuz Döngü / Çok Derin Recursion).");
-        setIsRunning(false);
-        return;
+      setError("STACK OVERFLOW EXCEPTION! Bellek sınırı aşıldı (Sonsuz Döngü / Çok Derin Recursion).");
+      setIsRunning(false);
+      return;
     }
 
     // SAVE TO HISTORY BEFORE UPDATE
@@ -128,75 +129,75 @@ const App = () => {
     const offset = growthDirection === 'down' ? -16 : 16;
 
     // 1. Function Call Detection
-    const isFuncDef = language === 'python' 
+    const isFuncDef = language === 'python'
       ? currentLine.includes('def ')
       : (currentLine.includes('void') || currentLine.includes('static') || currentLine.includes('long ') || currentLine.includes('int ')) && currentLine.includes('(');
-    
+
     const isFuncCall = currentLine.includes('()') || (currentLine.includes('(') && currentLine.includes(')') && !isFuncDef);
 
     if ((isFuncDef || isFuncCall) && !currentLine.includes('=') && !currentLine.includes('print')) {
-        const frameNameMatch = currentLine.match(/([a-zA-Z0-9_]+)\s*\(/);
-        const frameName = frameNameMatch?.[1] || 'Frame';
-        
-        const dynamicLink = stack.length > 0 ? stack[stack.length - 1].fp : '0x0000';
-        
-        const isNested = frameName === 'Calc' || frameName === 'Modify' || frameName === 'factorial' || frameName === 'Factorial' || frameName === 'fact';
-        const staticLink = isNested && stack.length > 0 ? stack[0].fp : '0x0000'; 
-        const staticDepth = isNested ? stack.length : 0;
-        const chainOffset = isNested ? 1 : 0;
+      const frameNameMatch = currentLine.match(/([a-zA-Z0-9_]+)\s*\(/);
+      const frameName = frameNameMatch?.[1] || 'Frame';
 
-        newStack.push({
-          id: `frame-${Date.now()}`,
-          name: language === 'python' ? 'Python Frame' : 'Stack Frame',
-          func: frameName,
-          fp: `0x${currentSp.toString(16).toUpperCase()}`,
-          dynamicLink: dynamicLink,
-          staticLink: staticLink,
-          staticDepth: staticDepth,
-          chainOffset: chainOffset,
-          returnAddr: `0x0${(actualLineIndex * 4).toString(16).toUpperCase()}`,
-          vars: []
-        });
-        setFp(`0x${currentSp.toString(16).toUpperCase()}`);
-        currentSp += offset;
+      const dynamicLink = stack.length > 0 ? stack[stack.length - 1].fp : '0x0000';
+
+      const isNested = frameName === 'Calc' || frameName === 'Modify' || frameName === 'factorial' || frameName === 'Factorial' || frameName === 'fact';
+      const staticLink = isNested && stack.length > 0 ? stack[0].fp : '0x0000';
+      const staticDepth = isNested ? stack.length : 0;
+      const chainOffset = isNested ? 1 : 0;
+
+      newStack.push({
+        id: `frame-${Date.now()}`,
+        name: language === 'python' ? 'Python Frame' : 'Stack Frame',
+        func: frameName,
+        fp: `0x${currentSp.toString(16).toUpperCase()}`,
+        dynamicLink: dynamicLink,
+        staticLink: staticLink,
+        staticDepth: staticDepth,
+        chainOffset: chainOffset,
+        returnAddr: `0x0${(actualLineIndex * 4).toString(16).toUpperCase()}`,
+        vars: []
+      });
+      setFp(`0x${currentSp.toString(16).toUpperCase()}`);
+      currentSp += offset;
     }
 
     // 2. Variable & Heap Allocation
     // Support for: int x = 10, x = 10, int* p = malloc(10), User u = new User()
     const isAssignment = currentLine.includes('=');
-    
+
     if (isAssignment) {
-        const varMatch = currentLine.match(/(?:[a-zA-Z0-9_*]+\s+)?([a-zA-Z0-9_]+)\s*=\s*(.+)/);
-        
-        if (varMatch && newStack.length > 0) {
-            const varName = varMatch[1].trim();
-            const rawValue = varMatch[2].trim().replace(';', '');
-            
-            let varValue = rawValue;
-            let isHeapAlloc = false;
+      const varMatch = currentLine.match(/(?:[a-zA-Z0-9_*]+\s+)?([a-zA-Z0-9_]+)\s*=\s*(.+)/);
 
-            // Detect Heap Allocation (malloc or new)
-            if (rawValue.includes('malloc') || rawValue.includes('new ')) {
-                isHeapAlloc = true;
-                const heapLabel = rawValue.includes('malloc') ? `Alloc(${varName})` : `Obj(${rawValue.split(' ').pop()})`;
-                setHeap(prev => [...prev, { label: heapLabel }]);
-                varValue = `Heap@${Math.floor(Math.random() * 1000).toString(16).toUpperCase()}`;
-            } else if (language === 'java' || language === 'python') {
-                // In Java/Python, almost everything is an object on heap in this simulator's logic
-                setHeap(prev => [...prev, { label: `Obj(${rawValue})` }]);
-                varValue = `${language === 'java' ? 'Ref' : 'Obj'}@${rawValue}`;
-            }
+      if (varMatch && newStack.length > 0) {
+        const varName = varMatch[1].trim();
+        const rawValue = varMatch[2].trim().replace(';', '');
 
-            const activeFrameIndex = newStack.length - 1;
-            const updatedFrame = { ...newStack[activeFrameIndex] };
-            updatedFrame.vars = [...updatedFrame.vars, {
-                name: varName,
-                value: varValue,
-                addr: `0x${currentSp.toString(16).toUpperCase()}`
-            }];
-            newStack[activeFrameIndex] = updatedFrame;
-            currentSp += offset;
+        let varValue = rawValue;
+        let isHeapAlloc = false;
+
+        // Detect Heap Allocation (malloc or new)
+        if (rawValue.includes('malloc') || rawValue.includes('new ')) {
+          isHeapAlloc = true;
+          const heapLabel = rawValue.includes('malloc') ? `Alloc(${varName})` : `Obj(${rawValue.split(' ').pop()})`;
+          setHeap(prev => [...prev, { label: heapLabel }]);
+          varValue = `Heap@${Math.floor(Math.random() * 1000).toString(16).toUpperCase()}`;
+        } else if (language === 'java' || language === 'python') {
+          // In Java/Python, almost everything is an object on heap in this simulator's logic
+          setHeap(prev => [...prev, { label: `Obj(${rawValue})` }]);
+          varValue = `${language === 'java' ? 'Ref' : 'Obj'}@${rawValue}`;
         }
+
+        const activeFrameIndex = newStack.length - 1;
+        const updatedFrame = { ...newStack[activeFrameIndex] };
+        updatedFrame.vars = [...updatedFrame.vars, {
+          name: varName,
+          value: varValue,
+          addr: `0x${currentSp.toString(16).toUpperCase()}`
+        }];
+        newStack[activeFrameIndex] = updatedFrame;
+        currentSp += offset;
+      }
     }
 
     setStack(newStack);
@@ -214,7 +215,7 @@ const App = () => {
     if (!isRunning) return;
     const allLines = code.split('\n');
     const nonEmptyLineIndices = allLines.filter(l => l.trim() !== '');
-    
+
     if (step >= nonEmptyLineIndices.length) {
       setIsRunning(false);
       return;
@@ -250,14 +251,14 @@ const App = () => {
           <div className="logo-icon"><Database size={20} color="white" /></div>
           <span>BELLEK LABORATUVARI</span>
         </div>
-        
+
         <div className="header-controls" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {/* Speed Slider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '10px', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '20px' }}>
             <Activity size={12} color="#888" />
-            <input 
-              type="range" min="100" max="2000" step="100" 
-              value={playbackSpeed} 
+            <input
+              type="range" min="100" max="2000" step="100"
+              value={playbackSpeed}
               onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
               style={{ width: '60px', accentColor: 'var(--theme-primary)' }}
             />
@@ -267,7 +268,7 @@ const App = () => {
           <button className={`btn ${isDeepView ? 'btn-primary' : ''}`} onClick={() => setIsDeepView(!isDeepView)} title="Deep View (Hardware Level)">
             <Zap size={16} color={isDeepView ? '#fff' : '#888'} />
           </button>
-          <button className={`btn ${isPaperMode ? 'btn-primary' : ''}`} onClick={() => setIsPaperMode(!isPaperMode)} title="Kağıt Çizim Görünümü" style={isPaperMode ? {background: '#f59e0b', color: '#000'} : {}}>
+          <button className={`btn ${isPaperMode ? 'btn-primary' : ''}`} onClick={() => setIsPaperMode(!isPaperMode)} title="Kağıt Çizim Görünümü" style={isPaperMode ? { background: '#f59e0b', color: '#000' } : {}}>
             <PenTool size={16} /> Kağıt
           </button>
           <button className="btn" onClick={exportState} title="Export Report"><Download size={16} /></button>
@@ -281,21 +282,21 @@ const App = () => {
 
         <div className="lang-switcher">
           <div className="switch-container">
-            <span>Standart (Down)</span>
+            <span>Standart (Aşağıdan)</span>
             <label className="switch">
-              <input 
-                type="checkbox" 
-                checked={growthDirection === 'up'} 
+              <input
+                type="checkbox"
+                checked={growthDirection === 'up'}
                 onChange={(e) => setGrowthDirection(e.target.checked ? 'up' : 'down')}
               />
               <span className="slider"></span>
             </label>
-            <span>Anti-gravity (Up)</span>
+            <span> (Yukarıdan)</span>
           </div>
 
           <div className="lang-toggle" style={{ background: '#18181b', padding: '4px', borderRadius: '12px', display: 'flex', gap: '4px' }}>
-            <select 
-              className="btn" 
+            <select
+              className="btn"
               style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.75rem' }}
               defaultValue="default"
               onChange={(e) => {
@@ -306,7 +307,7 @@ const App = () => {
             >
               <option value="default" disabled>📚 Senaryo Seç</option>
               {Object.keys(TEMPLATES[language]).map(key => (
-                <option key={key} value={key} style={{background:'#111'}}>{key}</option>
+                <option key={key} value={key} style={{ background: '#111' }}>{key}</option>
               ))}
             </select>
             <button className={`btn ${language === 'c' ? 'btn-primary' : ''}`} onClick={() => setLanguage('c')}>C</button>
@@ -319,7 +320,7 @@ const App = () => {
 
       {/* Main Layout */}
       <main className="main-layout">
-        
+
         <section className={`panel ${isPaperMode ? 'paper-bg' : ''}`}>
           <div className="panel-header"><Database size={16} /> GÖRSEL BELLEK (STACK)</div>
           <div className={`stack-container ${error ? 'stack-crash' : ''}`} style={{ flexDirection: growthDirection === 'down' ? 'column' : 'column-reverse' }}>
@@ -332,14 +333,14 @@ const App = () => {
                 <p style={{ fontSize: '0.8rem' }}>Bellek Henüz Boş</p>
               </div>
             )}
-            
+
             {error && (
-              <div style={{ 
-                background: 'rgba(239, 68, 68, 0.1)', 
-                border: '1px solid #ef4444', 
-                color: '#ef4444', 
-                padding: '10px', 
-                borderRadius: '8px', 
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid #ef4444',
+                color: '#ef4444',
+                padding: '10px',
+                borderRadius: '8px',
                 fontSize: '0.7rem',
                 margin: '10px',
                 textAlign: 'center',
@@ -359,15 +360,15 @@ const App = () => {
                 <div className="frame-body">
                   <div className="frame-item"><span className="label">Return Addr:</span><span className="value hex">{frame.returnAddr}</span></div>
                   <div className="frame-item"><span className="label">Dynamic Link:</span><span className="value link">{frame.dynamicLink}</span></div>
-                  <div className="frame-item"><span className="label">Static Link:</span><span className="value link" style={{color: '#8b5cf6'}}>{frame.staticLink || 'N/A'}</span></div>
-                  <div style={{display: 'flex', gap: '10px', marginTop: '4px'}}>
-                    <div className="frame-item" style={{flex: 1}}><span className="label">Depth:</span><span className="value">{frame.staticDepth ?? 0}</span></div>
-                    <div className="frame-item" style={{flex: 1}}><span className="label">Offset:</span><span className="value">{frame.chainOffset ?? 0}</span></div>
+                  <div className="frame-item"><span className="label">Static Link:</span><span className="value link" style={{ color: '#8b5cf6' }}>{frame.staticLink || 'N/A'}</span></div>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                    <div className="frame-item" style={{ flex: 1 }}><span className="label">Depth:</span><span className="value">{frame.staticDepth ?? 0}</span></div>
+                    <div className="frame-item" style={{ flex: 1 }}><span className="label">Offset:</span><span className="value">{frame.chainOffset ?? 0}</span></div>
                   </div>
                   {frame.vars.map((v, vi) => (
-                    <div key={vi} className={`frame-item ${v.value.includes('@') ? 'ref-active' : ''}`} style={{ 
-                      borderTop: '1px solid #18181b', 
-                      padding: '6px', 
+                    <div key={vi} className={`frame-item ${v.value.includes('@') ? 'ref-active' : ''}`} style={{
+                      borderTop: '1px solid #18181b',
+                      padding: '6px',
                       marginTop: '4px',
                       borderRadius: '4px',
                       transition: 'all 0.3s ease',
@@ -392,7 +393,7 @@ const App = () => {
               </div>
             ))}
           </div>
-          
+
           {/* CPU Registers Panel - High Tech Style */}
           <div className="registers-panel" style={{ padding: '15px', background: '#050507', borderTop: '1px solid #1a1a1e' }}>
             <div className="reg-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
@@ -416,11 +417,11 @@ const App = () => {
           <div className="heap-area">
             <div className="heap-title"><Share2 size={14} /> HEAP (DİNAMİK BELLEK)</div>
             <div className="heap-grid">
-              {heap.length === 0 && <span style={{fontSize:'0.7rem', color:'var(--text-secondary)'}}>Heap Boş</span>}
+              {heap.length === 0 && <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Heap Boş</span>}
               {heap.map((obj, idx) => {
                 const isReferenced = stack.some(f => f.vars.some(v => v.value.includes(`@${obj.label.match(/\((.*)\)/)?.[1]}`)));
                 return (
-                  <div key={idx} className="heap-obj" style={{ 
+                  <div key={idx} className="heap-obj" style={{
                     border: isReferenced ? '2px solid var(--theme-primary)' : '1px solid var(--border-color)',
                     boxShadow: isReferenced ? '0 0 15px var(--theme-glow)' : 'none',
                     transform: isReferenced ? 'scale(1.05)' : 'scale(1)',
@@ -447,20 +448,20 @@ const App = () => {
               ))}
             </div>
             <div style={{ position: 'relative', overflow: 'hidden', flex: 1 }}>
-              <div 
-                className="active-line-bg" 
-                style={{ 
-                  top: `${(pc * 1.6) + 1}rem`, 
+              <div
+                className="active-line-bg"
+                style={{
+                  top: `${(pc * 1.6) + 1}rem`,
                   height: '1.6rem',
                   backgroundColor: 'rgba(255, 255, 255, 0.03)',
                   borderLeft: '3px solid var(--theme-primary)'
                 }}
               ></div>
-              <textarea 
-                className="code-area" 
-                value={code} 
-                onChange={(e) => setCode(e.target.value)} 
-                spellCheck="false" 
+              <textarea
+                className="code-area"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                spellCheck="false"
               />
             </div>
           </section>
@@ -471,7 +472,7 @@ const App = () => {
               <Layout size={14} color="var(--theme-primary)" /> SISTEM ANALİZ VE PERFORMANS
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', padding: '20px' }}>
-              
+
               {/* Task State Statistics */}
               <div style={{ background: 'rgba(255,255,255,0.015)', padding: '16px', borderRadius: '12px', border: '1px solid #1a1a1a' }}>
                 <p style={{ fontSize: '0.65rem', fontWeight: '800', marginBottom: '15px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>BELLEK DAĞILIMI</p>
@@ -548,7 +549,7 @@ const App = () => {
                 </div>
               </div>
             )}
-            
+
             <div className="theory-card" style={{ background: 'rgba(255,255,255,0.02)', borderLeft: '4px solid var(--theme-primary)', padding: '15px', borderRadius: '8px' }}>
               <h3 style={{ fontSize: '0.85rem', marginBottom: '10px' }}>{language.toUpperCase()} - Analiz ve Kavramlar</h3>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
